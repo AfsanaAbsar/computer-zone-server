@@ -18,6 +18,7 @@ async function run() {
         await client.connect();
         console.log('db connected');
         const productsCollection = client.db('computerZone').collection('products');
+        const orderCollection = client.db('computerZone').collection('order');
 
 
         //load services
@@ -36,6 +37,19 @@ async function run() {
             const product = await productsCollection.findOne(query);
             res.send(product)
         })
+
+        //send order details to database
+        app.post('/order', async (req, res) => {
+            const order = req.body;
+            console.log(order);
+            const query = { product: order.product, buyerEmail: order.buyerEmail }
+            const exists = await orderCollection.findOne(query);
+            if (exists) {
+                return res.send({ success: false, order: exists })
+            }
+            const result = await orderCollection.insertOne(order);
+            return res.send({ success: true, result })
+        });
     }
 
     finally {
