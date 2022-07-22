@@ -19,6 +19,7 @@ async function run() {
         console.log('db connected');
         const productsCollection = client.db('computerZone').collection('products');
         const orderCollection = client.db('computerZone').collection('order');
+        const userCollection = client.db('computerZone').collection('users');
 
 
         //load services
