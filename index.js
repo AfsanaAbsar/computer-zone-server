@@ -50,6 +50,15 @@ async function run() {
             const result = await orderCollection.insertOne(order);
             return res.send({ success: true, result })
         });
+
+        //display user's specific order
+        app.get('/order', async (req, res) => {
+            const buyerEmail = req.query.buyerEmail;
+            const query = { buyerEmail: buyerEmail };
+            const orders = await orderCollection.find(query).toArray();
+            res.send(orders)
+        })
+
     }
 
     finally {
