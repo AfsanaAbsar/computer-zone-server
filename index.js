@@ -36,6 +36,7 @@ async function run() {
         const orderCollection = client.db('computerZone').collection('order');
         const userCollection = client.db('computerZone').collection('users');
         const reviewCollection = client.db('computerZone').collection('reviews');
+        const profileCollection = client.db('computerZone').collection('profiles');
 
         //admin
         const verifyAdmin = async (req, res, next) => {
@@ -66,6 +67,25 @@ async function run() {
             const query = { _id: ObjectId(id) }
             const product = await productsCollection.findOne(query);
             res.send(product)
+        })
+
+        //update single service after order
+
+        app.put('/products/:id', async (req, res) => {
+            const id = req.params.id;
+            const updatedQuantity = req.body.updatedQuantity;
+
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    quantity: updatedQuantity,
+
+                }
+            }
+            console.log(updatedDoc);
+            const result = await productsCollection.updateOne(filter, updatedDoc, options);
+            res.send(result)
         })
 
         //send order details to database
@@ -110,7 +130,7 @@ async function run() {
         })
 
         //load users on ui
-        app.get('/user', verifyJWT, async (req, res) => {
+        app.get('/user', async (req, res) => {
             const users = await userCollection.find().toArray()
             res.send(users)
         })
@@ -167,6 +187,34 @@ async function run() {
             const reviews = await cursor.toArray();
             res.send(reviews);
         });
+
+        // send profile info to database
+        app.put('/userprofile/:email', async (req, res) => {
+            const email = req.params.email;
+            const profile = req.body;
+            const filter = { email: email };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: profile,
+            };
+            const result = await profileCollection.updateOne(filter, updateDoc, options);
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '24hrs' })
+            res.send({ result, token });
+        })
+        //load profile info on ui
+        app.get('/userProfile/:email', async (req, res) => {
+            const email = req.params.email;
+
+            const query = { email: email }
+
+            const cursor = profileCollection.find(query);
+            const profile = await cursor.toArray();
+            console.log(profile);
+            res.send(profile);
+        });
+
+
+
 
 
     }
