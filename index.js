@@ -268,7 +268,7 @@ async function run() {
 
 
         //load all orders
-        app.get('/orders', async (req, res) => {
+        app.get('/orders', verifyJWT, async (req, res) => {
             const query = {}
             const cursor = orderCollection.find(query);
             const orders = await cursor.toArray();
@@ -277,13 +277,25 @@ async function run() {
 
 
         //delete product
-        app.delete('/products/:id', async (req, res) => {
+        app.delete('/products/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) }
             const result = await productsCollection.deleteOne(query);
             res.send(result)
         })
 
+        //loading user profile
+
+        app.get('/user/:email', async (req, res) => {
+            const email = req.params.email;
+
+            const query = { email: email }
+
+            const cursor = userCollection.find(query);
+            const profile = await cursor.toArray();
+            console.log(profile);
+            res.send(profile);
+        });
 
     }
 
