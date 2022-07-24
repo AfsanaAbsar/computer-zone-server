@@ -7,6 +7,8 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
+
 app.use(cors());
 app.use(express.json());
 
@@ -37,6 +39,7 @@ async function run() {
         const userCollection = client.db('computerZone').collection('users');
         const reviewCollection = client.db('computerZone').collection('reviews');
         const profileCollection = client.db('computerZone').collection('profiles');
+        const paymentCollection = client.db('computerZone').collection('payments');
 
         //admin
         const verifyAdmin = async (req, res, next) => {
@@ -52,7 +55,7 @@ async function run() {
         }
 
 
-        //load services
+        //load products
         app.get('/products', async (req, res) => {
             const query = {}
             const cursor = productsCollection.find(query);
@@ -60,7 +63,7 @@ async function run() {
             res.send(products);
         });
 
-        //load a single service 
+        //load a single product 
         app.get('/products/:id', async (req, res) => {
             const id = req.params.id
 
@@ -69,7 +72,7 @@ async function run() {
             res.send(product)
         })
 
-        //update single service after order
+        //update single product after order
 
         app.put('/products/:id', async (req, res) => {
             const id = req.params.id;
@@ -213,8 +216,73 @@ async function run() {
             res.send(profile);
         });
 
+        //load a single order for payment
+
+        app.get('/order/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const order = await orderCollection.findOne(query);
+            res.send(order);
+        })
+
+        //payment intent api
+        app.post('/create-payment-intent', async (req, res) => {
+            const { totalprice } = req.body;
+            console.log(totalprice);
+            const amount = totalprice * 100;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                payment_method_types: ["card"],
+            });
+            res.send({ clientSecret: paymentIntent.client_secret });
+        });
 
 
+        //payment data send to database
+        app.patch('/order/:id', async (req, res) => {
+            const id = req.params.id;
+            const payment = req.body;
+            const filter = { _id: ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            }
+
+            const result = await paymentCollection.insertOne(payment);
+            const updatedorder = await orderCollection.updateOne(filter, updatedDoc);
+            res.send(updatedorder);
+        })
+
+
+        //cancel order data send to database
+        app.delete('/order/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) }
+            const result = await orderCollection.deleteOne(query);
+            res.send(result)
+        })
+
+
+        //load all orders
+        app.get('/orders', async (req, res) => {
+            const query = {}
+            const cursor = orderCollection.find(query);
+            const orders = await cursor.toArray();
+            res.send(orders);
+        });
+
+
+        //delete product
+        app.delete('/products/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) }
+            const result = await productsCollection.deleteOne(query);
+            res.send(result)
+        })
 
 
     }
@@ -233,3 +301,18 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
     console.log(`computer listening on port ${port}`)
 })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
